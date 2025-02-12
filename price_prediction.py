@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime, timedelta
-from fbprophet import Prophet
+from prophet import Prophet
 import matplotlib.pyplot as plt
 import time
 
