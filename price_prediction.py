@@ -1,79 +1,83 @@
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
-from prophet import Prophet
+import datetime
 import matplotlib.pyplot as plt
-import time
+from prophet import Prophet
 
-# 设置 Streamlit 页面
-st.set_page_config(page_title='BTC Price Prediction', page_icon=':chart_with_upwards_trend:')
+# Streamlit UI settings
+st.set_page_config(page_title="Crypto Price Prediction", page_icon=":chart_with_upwards_trend:")
 
-st.title("BTC 价格预测 (Gate.io API + Prophet)")
+# Title
+st.title("Crypto Price Prediction with Prophet")
+st.write("Retrieve historical data from Gate.io and predict future prices using the Prophet model.")
 
-# 选择交易对
-symbol = st.text_input("输入交易对 (如 BTC_USDT):", "BTC_USDT")
+# User input parameters
+symbol = st.text_input("Enter Trading Pair (e.g., BTC_USDT):", "BTC_USDT")
+interval = st.selectbox("Select Data Frequency:", ["1m", "5m", "1h", "4h", "1d"], index=4)
+history_points = st.slider("Number of historical data points:", min_value=50, max_value=500, value=200)
+future_points = st.slider("Number of future data points to predict:", min_value=10, max_value=300, value=100)
 
-# 选择数据频率
-interval_options = {"1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400}
-interval = st.selectbox("选择数据频率:", list(interval_options.keys()), index=5)
-interval_seconds = interval_options[interval]
-
-# 选择数据点数
-num_points = st.slider("选择要获取的历史数据点数:", min_value=100, max_value=1000, value=500, step=50)
-
-# 选择预测点数
-future_points = st.slider("选择预测的未来数据点数:", min_value=10, max_value=500, value=200, step=10)
-
-# 获取 Gate.io 价格数据
-def fetch_gateio_data(symbol, interval, num_points):
-    base_url = "https://api.gateio.ws/api/v4/spot/candlesticks"
-    params = {
-        "currency_pair": symbol,
-        "interval": interval,
-        "limit": num_points
-    }
-    
-    response = requests.get(base_url, params=params)
+# Fetch historical data from Gate.io API
+def fetch_data(symbol, interval, limit):
+    url = f"https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair={symbol}&interval={interval}&limit={limit}"
+    response = requests.get(url)
     if response.status_code == 200:
-        data = response.json()
-        df = pd.DataFrame(data, columns=["timestamp", "open", "high", "low", "close", "volume"])
-        df["timestamp"] = pd.to_datetime(df["timestamp"].astype(int), unit='s')
-        df["close"] = df["close"].astype(float)
-        return df
+        return response.json()
     else:
-        st.error(f"获取数据失败: {response.status_code}")
+        st.error("Failed to retrieve data. Please check the trading pair or try again later.")
         return None
 
-# 获取数据
-st.write("正在获取历史数据...")
-df = fetch_gateio_data(symbol, interval, num_points)
-if df is not None:
-    st.write("数据加载完成!")
-    st.write(df.tail())
-    
-    # 准备数据给 Prophet
-    df_prophet = df[["timestamp", "close"]].rename(columns={"timestamp": "ds", "close": "y"})
-    
-    # 训练 Prophet 模型
-    st.write("训练 Prophet 模型...")
-    model = Prophet()
-    model.fit(df_prophet)
-    
-    # 生成未来时间点
-    future = model.make_future_dataframe(periods=future_points, freq=interval)
-    
-    # 进行预测
-    forecast = model.predict(future)
-    
-    # 绘制预测结果
-    st.write("预测结果:")
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(df_prophet["ds"], df_prophet["y"], label="历史价格", linewidth=2)
-    ax.plot(forecast["ds"], forecast["yhat"], label="预测价格", linestyle="--", color="orange", linewidth=2)
-    ax.fill_between(forecast["ds"], forecast["yhat_lower"], forecast["yhat_upper"], color='orange', alpha=0.2, label='置信区间')
-    ax.set_title("BTC 价格预测")
-    ax.set_xlabel("日期")
-    ax.set_ylabel("价格 (USDT)")
-    ax.legend()
-    st.pyplot(fig)
+# Process data
+def process_data(data):
+    df = pd.DataFrame(data, columns=["timestamp", "open", "high", "low", "close", "volume"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"].astype(int), unit='s')
+    df = df.sort_values(by="timestamp")
+    df.rename(columns={"timestamp": "ds", "close": "y"}, inplace=True)
+    df["y"] = df["y"].astype(float)
+    return df
+
+# Run data fetching and prediction
+if st.button("Run Prediction"):
+    st.write("Fetching data...")
+    raw_data = fetch_data(symbol, interval, history_points)
+    if raw_data:
+        df = process_data(raw_data)
+        
+        # Initialize Prophet model with tuning parameters
+        model = Prophet(
+            changepoint_prior_scale=0.1,  # Increase sensitivity to detect trend changes
+            interval_width=0.2,  # Confidence interval
+            uncertainty_samples=500,  # Reduce uncertainty
+            daily_seasonality=True
+        )
+        
+        # Add seasonality based on the interval
+        if interval == "1h":
+            model.add_seasonality(name='daily', period=24, fourier_order=6)
+        elif interval == "4h":
+            model.add_seasonality(name='daily', period=6, fourier_order=6)
+        elif interval == "1d":
+            model.add_seasonality(name='weekly', period=7, fourier_order=3)
+        
+        model.fit(df)
+        
+        # Make future predictions
+        future = model.make_future_dataframe(periods=future_points, freq=interval)
+        forecast = model.predict(future)
+        
+        # Plot results
+        st.write("### Price Prediction Chart")
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(df["ds"], df["y"], label="Historical Price", linewidth=2)
+        ax.plot(forecast["ds"], forecast["yhat"], label="Predicted Price", linestyle="--", color="orange", linewidth=2)
+        ax.fill_between(forecast["ds"], forecast["yhat_lower"], forecast["yhat_upper"], color="orange", alpha=0.2, label="Confidence Interval")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Price")
+        ax.set_title(f"Price Prediction for {symbol}")
+        ax.legend()
+        st.pyplot(fig)
+        
+        # Show forecast data
+        st.write("### Forecasted Prices")
+        st.dataframe(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(future_points))
