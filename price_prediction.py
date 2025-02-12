@@ -206,6 +206,5 @@ if st.button("Run Prediction"):
         combined_data = historical_display.join(forecast_display, how="outer")
         st.line_chart(combined_data, color=["#0068FF", "#17E6A1"])
 
-        # 示例调用（请确保 df 和 forecast 已经被 Prophet 计算出来）
-        st.write(f"### {symbol} Price Prediction")
+        st.write(f"### {symbol} Price Prediction With Confidence Interval")
         plot_prediction(df, forecast, symbol)
