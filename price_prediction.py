@@ -11,8 +11,7 @@ st.set_page_config(page_title="Crypto Price Prediction", page_icon=":chart_with_
 
 # Title
 st.title("Crypto Price Prediction with AI Model")
-st.markdown("**Retrieve historical data from Gate.io and predict future prices using the Prophet model.**")   
-
+st.markdown("**Retrieve historical data from [Gate.io](https://www.gate.io) and predict future prices using the Prophet model.**")
 
 
 # Display Prophet Introduction
