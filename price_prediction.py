@@ -11,14 +11,15 @@ st.set_page_config(page_title="Crypto Price Prediction", page_icon=":chart_with_
 
 # Title
 st.title("Crypto Price Prediction with AI Model")
-st.write("Retrieve historical data from Gate.io and predict future prices using the Prophet model.")
+st.markdown("**Retrieve historical data from Gate.io and predict future prices using the Prophet model.**")
+
 
 # Display Prophet Introduction
 st.markdown("""
-## 📌 What is Prophet?
+### 📌 What is Prophet?
 Prophet is a **time series forecasting model** developed by Facebook (now Meta). It is designed to handle **trend and seasonality** automatically, making it ideal for business and financial forecasting. Prophet is based on an **additive model**, allowing it to capture trends, seasonal patterns, and external influences effectively.
 
-## 📊 Key Features of Prophet
+### 📊 Key Features of Prophet
 - **Automatic Trend Detection** – Supports both linear and non-linear trends with changepoint detection.  
 - **Multi-Seasonality Support** – Handles **daily, weekly, and yearly seasonality** without manual configuration.  
 - **Robust to Missing Data & Outliers** – Can handle missing values and is less sensitive to extreme fluctuations.  
