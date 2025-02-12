@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import datetime
-import matplotlib.pyplot as plt
 from prophet import Prophet
 
 # Streamlit UI settings
