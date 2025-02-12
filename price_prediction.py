@@ -67,17 +67,22 @@ if st.button("Run Prediction"):
         forecast = model.predict(future)
         
         # Plot results
+        # Display the forecast using Streamlit's built-in charting function
         st.write("### Price Prediction Chart")
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.plot(df["ds"], df["y"], label="Historical Price", linewidth=2)
-        ax.plot(forecast["ds"], forecast["yhat"], label="Predicted Price", linestyle="--", color="orange", linewidth=2)
-        ax.fill_between(forecast["ds"], forecast["yhat_lower"], forecast["yhat_upper"], color="orange", alpha=0.2, label="Confidence Interval")
-        ax.set_xlabel("Date")
-        ax.set_ylabel("Price")
-        ax.set_title(f"Price Prediction for {symbol}")
-        ax.legend()
-        st.pyplot(fig)
         
-        # Show forecast data
-        st.write("### Forecasted Prices")
-        st.dataframe(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(future_points))
+        forecast_display = forecast[['ds', 'yhat']]
+        forecast_display = forecast_display.rename(columns={"ds": "Date", "yhat": "Predicted Price"})
+        forecast_display.set_index("Date", inplace=True)
+        
+        historical_display = df[['ds', 'y']]
+        historical_display = historical_display.rename(columns={"ds": "Date", "y": "Historical Price"})
+        historical_display.set_index("Date", inplace=True)
+        
+        # Combine historical and predicted data
+        combined_data = historical_display.join(forecast_display, how="outer")
+        
+        st.line_chart(combined_data)
+        
+        # # Show forecast data
+        # st.write("### Forecasted Prices")
+        # st.dataframe(forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(future_points))
